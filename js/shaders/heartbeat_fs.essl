@@ -1,0 +1,18 @@
+Shader.source[document.currentScript.src.split('js/shaders/')[1]] = `#version 300 es 
+  precision highp float;
+
+  out vec4 fragmentColor;
+  
+  in vec4 color; // received from VS via RS
+  uniform vec4 solidColor; 
+  uniform vec4 solidColor2;
+  uniform float timeDiff;
+
+  void main(void) {
+    if(mod(timeDiff, 1000.0) < 500.0){
+        fragmentColor = solidColor;
+    } else{
+        fragmentColor = solidColor2;
+    }
+  }
+`;

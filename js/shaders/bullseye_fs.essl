@@ -1,0 +1,21 @@
+Shader.source[document.currentScript.src.split('js/shaders/')[1]] = `#version 300 es 
+  precision highp float;
+
+  out vec4 fragmentColor;
+  
+  in vec4 position;
+  in vec4 color; // received from VS via RS
+
+  // uniforms for stipped properties:
+  uniform vec4 stripeColor1; 
+  uniform vec4 stripeColor2; 
+  uniform float stripeWidth;
+
+  void main(void) {
+    if (mod(sqrt(pow((position[0]), 2.0) + pow((position[1]), 2.0)), .1) < stripeWidth){
+        fragmentColor = stripeColor1; 
+    } else{
+        fragmentColor = stripeColor2;
+    }
+  }
+`;

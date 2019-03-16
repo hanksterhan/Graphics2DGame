@@ -1,0 +1,26 @@
+Shader.source[document.currentScript.src.split('js/shaders/')[1]] = `#version 300 es 
+  precision highp float;
+
+  out vec4 fragmentColor;
+  
+  in vec4 position;
+  in vec4 color; // received from VS via RS
+  //GEORGE BENZ
+  // uniforms for stipped properties:
+  uniform vec4 boxColor1; 
+  uniform vec4 boxColor2; 
+  uniform float boxWidth;
+
+  void main(void) {
+    if (mod(position[1], boxWidth) > boxWidth/2.0){
+        fragmentColor = boxColor1; 
+    } else{
+        fragmentColor = boxColor2;
+    }
+    if (mod(position[0], boxWidth) > boxWidth/2.0){
+        fragmentColor = boxColor2; 
+    } 
+
+
+  }
+`;
