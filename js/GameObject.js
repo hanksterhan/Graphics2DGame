@@ -7,6 +7,7 @@ const GameObject = function(mesh) {
     this.scale = new Vec3(1, 1, 1);
 
     this.modelMatrix = new Mat4();
+    this.area = new Vec4(0,0,0,0); // xmin, xmax, ymin, ymax - represents the boundaries that the object can be clicked
 };
 
 GameObject.prototype.updateModelMatrix = function() {
