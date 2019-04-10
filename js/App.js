@@ -43,6 +43,7 @@ App.prototype.registerEventHandlers = function() {
       this.keysPressed.Q = 1;
     }
   };
+
   document.onkeyup = (event) => {
     if(keyboardMap[event.keyCode] === "B"){
       this.keysPressed.B = 0;
@@ -51,16 +52,23 @@ App.prototype.registerEventHandlers = function() {
       this.keysPressed.A = Q;
     }
   };
+
   this.canvas.onmousedown = (event) => {
     // calculate and scale the mouse clicks so that they are where the computer thinks they are
     this.mousePressed.Down = 1;
-    this.mousePressed.X = 2*((event.clientX / this.canvas.width) - 0.5);
-    this.mousePressed.Y = -2*((event.clientY / this.canvas.height) - 0.5);
+    this.mousePressed.Xdown = 2*((event.clientX / this.canvas.width) - 0.5);
+    this.mousePressed.Ydown = -2*((event.clientY / this.canvas.height) - 0.5);
+    this.mousePressed.PreviousX = event.clientX;
+    this.mousePressed.PreviousY = event.clientY;
   };
+
   this.canvas.onmousemove = (event) => {
     event.stopPropagation();
     if (this.mousePressed.Down){
       this.mousePressed.Move = 1;
+      this.mousePressed.currentX = 2*((event.clientX / this.canvas.width) - 0.5);
+      this.mousePressed.currentY = 2*((event.clientY / this.canvas.width) - 0.5);
+
 
       this.mousePressed.dx = 2*(((event.clientX - this.mousePressed.PreviousX) / this.canvas.width));
       this.mousePressed.dy = -2*(((event.clientY - this.mousePressed.PreviousY) / this.canvas.height));
@@ -74,6 +82,9 @@ App.prototype.registerEventHandlers = function() {
   this.canvas.onmouseup = (event) => {
     this.mousePressed.Down = 0;
     this.mousePressed.Move = 1;
+    this.mousePressed.Xup = 2*((event.clientX / this.canvas.width) - 0.5);
+    this.mousePressed.Yup = -2*((event.clientY / this.canvas.height) - 0.5);
+
   };
   window.addEventListener('resize', () => this.resize() );
   window.requestAnimationFrame( () => this.update() );
