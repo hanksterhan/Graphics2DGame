@@ -1,8 +1,10 @@
 "use strict";
-const GameObject = function(mesh) {
+const GameObject = function(mesh, meshID) {
     this.mesh = mesh;
+    this.meshID = meshID;
     
     this.position = new Vec3(0, 0, 0);
+    this.originalPosition = new Vec3(0,0,0);
     this.orientation = 0;
     this.scale = new Vec3(1, 1, 1);
 
