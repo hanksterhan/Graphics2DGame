@@ -37,7 +37,6 @@ const Scene = function(gl) {
   this.camera = new OrthoCamera();
   this.camera.updateViewProjMatrix();
   
-  // this.asteroid.position.set({x:0, y:0, z:0});
   this.gameBoard = [];
   this.numRows = 10;
   this.numCols = 10;
@@ -69,10 +68,10 @@ Scene.prototype.checkValidSwap = function(direction){
 
   var xstart = 0;
   var xend = 0;
-  var xbar = 0;
+  var xbar = 0; // the original y axis of the x check
   var ystart = 0;
   var yend = 0;
-  var ybar = 0;
+  var ybar = 0; // the original x axis of the y check
 
   var xstart2 = this.selectedCol;
   var xend2 = this.selectedCol;
@@ -284,7 +283,7 @@ Scene.prototype.checkValidSwap = function(direction){
     returnList.push([xstart2, xend2, xbar2, ystart2, yend2, ybar2]);
     console.log("secondary swap");
   }
-
+  console.log("returning ", returnList);
   return returnList;
 }
 
@@ -300,7 +299,7 @@ Scene.prototype.clearGems = function(indices){
     var yend = indices[i][4];
     var ybar = indices[i][5];
     for(var j=xstart; j<=xend; j++){
-      this.bomb(j, xbar);
+      this.bomb(xbar, j);
     }
     for(var k=ystart; k<=yend; k++){
       this.bomb(k, ybar);
@@ -309,25 +308,32 @@ Scene.prototype.clearGems = function(indices){
 }
 
 Scene.prototype.bomb = function(row, col) {
+  console.log("deleting at", row, col)
   this.gameBoard[row][col].scale.set(0,0,0);
+  this.gameBoard[row][col].mesh = this.asteroidMeshes[Math.floor(Math.random() * this.asteroidMeshes.length)];
 }
 
 Scene.prototype.dramaticExit = function(row, col){
   console.log("deleting at ", row, col)
   const deleteTimeStart = new Date().getTime();
-  var dt = 0
+  var dt = 0;
+  var counter = 0;
   while(dt > -0.4){
     var timeAtThisFrame = new Date().getTime();
     dt = (deleteTimeStart - timeAtThisFrame) / 1000.0;
+    counter += 1;
     if (dt.toString().split('').pop() > 8){
-      this.gameBoard[row][col].scale.x *= 0.99;
-      this.gameBoard[row][col].scale.y *= 0.99;
-      this.gameBoard[row][col].orientation += 0.1;
-      console.log("spin");
+      this.gameBoard[row][col].scale.x -= 0.0009;
+      this.gameBoard[row][col].scale.y -= 0.0009;
+      // this.gameBoard[row][col].orientation += 0.1;
+      // this.gameBoard[row][col].position.x += 0.001;
+      // this.gameBoard[row][col].position.y += 0.001;
+      console.log("spin", this.gameBoard[row][col].position.storage[0]);
     }
     this.gameBoard[row][col].draw(this.camera);
-    // console.log(dt);
+    console.log(dt);
   }  
+  console.log(counter);
 }
 
 Scene.prototype.skyfall = function() {
@@ -349,16 +355,13 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
   const timeAtThisFrame = new Date().getTime();
   const dt = (timeAtThisFrame - this.timeAtLastFrame) / 1000.0;
   this.timeAtLastFrame = timeAtThisFrame;
-  if(mousePressed.Down){
-    console.log(mousePressed.Xdown*this.camera.windowSize.storage[0], mousePressed.Ydown*this.camera.windowSize.storage[1]);
-  }
+
   if (this.setFrame){
     this.startingX = this.camera.windowSize.storage[0] * -0.4;
     this.startingY = this.camera.windowSize.storage[1] * 0.8;
     this.deltaX =  this.camera.windowSize.storage[0] * 0.8 * 0.1;
     this.deltaY = this.camera.windowSize.storage[1] * 0.8 * -0.2;
     this.setFrame = 0;
-    console.log("window size: ", this.camera.windowSize.storage[0], this.camera.windowSize.storage[1]);
 
     // initialize game board
     for(var row=0; row<this.numRows; row++){
@@ -421,10 +424,8 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
 
   // if the key Q is pressed, quake
   if(keysPressed.Q){
-    if (this.quakeCount < 100){
-      console.log("Quake time");
+    if (this.quakeCount < this.quakeFrameLimit){
       this.quakeCount += 1;
-      console.log(this.camera.position.x, this.camera.position.y);
       this.camera.position.x = 0 + Math.sin(Math.random());
       this.camera.position.y = 0 + Math.sin(Math.random());
 
@@ -445,39 +446,14 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
   }
 
   // mouse drag selected objects if mouse is down and moving
-  if(mousePressed.Down && mousePressed.Move && this.selected != null){
+  if(mousePressed.Down && mousePressed.Move && this.selected != null && keysPressed.Z){
     var ratio = this.camera.windowSize.storage[0] / this.camera.windowSize.storage[1];
     var dx = (mousePressed.dx * this.camera.windowSize.storage[0]);
     var dy = (mousePressed.dy * this.camera.windowSize.storage[1]);
 
-    // determine which direction the mouse is moving, if not enough in either direction 
-    // this.gameBoard[this.selectedRow][this.selectedCol].position.x += dx;
-    // this.gameBoard[this.selectedRow][this.selectedCol].position.y += dy;
-    //horizontal movement
-    // if (Math.abs(dx) > Math.abs(dy)){
+    this.gameBoard[this.selectedRow][this.selectedCol].position.x += dx;
+    this.gameBoard[this.selectedRow][this.selectedCol].position.y += dy;
 
-
-    // } else{ //vertical movement
-
-    // }
-    // // left
-    // if (mousePressed.currentX < this.gameBoard[this.leftRow][this.leftCol].area.storage[1]) {
-
-    // }
-    // // right
-    // if (mousePressed.currentX > this.gameBoard[this.rightRow][this.rightCol].area.storage[0]) {
-
-    // }
-
-    // // up
-    // if (mousePressed.currentY > this.gameBoard[this.topRow][this.topCol].area.storage[2]) {
-
-    // }
-
-    // // down 
-    // if (mousePressed.currentY < this.gameBoard[this.bottomRow][this.bottomCol].area.storage[3]) {
-      
-    // }
   }
 
   // if there is a selected gem and the mouse moved, check if the mouse was released over a neighbor
@@ -494,8 +470,38 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
               this.gameBoard[this.topRow][this.topCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
               this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
               this.tempMesh = null;
+
+              if (keysPressed.Z){
+                this.gameBoard[this.selectedRow][this.selectedCol].position.set(
+                  {
+                    x:this.gameBoard[this.topRow][this.topCol].originalPosition.storage[0], 
+                    y:this.gameBoard[this.topRow][this.topCol].originalPosition.storage[1], 
+                    z:0
+                  }
+                );
+                this.gameBoard[this.topRow][this.topCol].position.set(
+                  {
+                    x:this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.storage[0], 
+                    y:this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.storage[1],
+                    z:0
+                  }
+                );
+                this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.set(
+                  {
+                    x:this.gameBoard[this.selectedRow][this.selectedCol].position.x,
+                    y:this.gameBoard[this.selectedRow][this.selectedCol].position.y,
+                    z:0
+                  }
+                );
+                this.gameBoard[this.topRow][this.topCol].originalPosition.set(
+                  {
+                    x:this.gameBoard[this.topRow][this.topCol].position.x,
+                    y:this.gameBoard[this.topRow][this.topCol].position.y,
+                    z:0
+                  }
+                );
+              }
               
-              console.log('valid swap');
               // reset the selected gem
               this.resetSelected();
               this.clearGems(indices);
@@ -505,23 +511,8 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
               this.resetSelected();
             }
    
-            
-            // //set temp
-            // this.tempX = this.gameBoard[this.topRow][this.topCol].originalPosition.storage[0];
-            // this.tempY = this.gameBoard[this.topRow][this.topCol].originalPosition.storage[1];
-            // console.log("preswap", this.tempX, this.tempY);
-            // this.gameBoard[this.selectedRow][this.selectedCol].position.set({x:this.tempX, y:this.tempY, z:0});
-            // this.gameBoard[this.t         // this.gameBoard[this.selectedRow][this.selectedCol].position = this.gameBoard[this.topRow][this.topCol].originalPosition;
-            // this.gameBoard[this.topRow][this.topCol].position = this.gameBoard[this.selectedRow][this.selectedCol].originalPosition;
-            // this.gameBoard[this.topRow][this.topCol].originalPosition = this.gameBoard[this.topRow][this.topCol].position;
-            // this.gameBoard[this.selectedRow][this.selectedCol].originalPosition = this.gameBoard[this.selectedRow][this.selectedCol].position;opRow][this.topCol].position.set({x:this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.storage[0], y:this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.storage[1], z:0})
-            
-            // this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.set({x:this.gameBoard[this.selectedRow][this.selectedCol].position.storage[0], y:this.gameBoard[this.selectedRow][this.selectedCol].position.storage[1], z:0});
-            // this.gameBoard[this.topRow][this.topCol].originalPosition.set({x:this.gameBoard[this.topRow][this.topCol].position.storage[0], y:this.gameBoard[this.topRow][this.topCol].position.storage[1], z:0});
-            // console.log("postswap", this.tempX, this.tempY);
 
-            // this.tempX = null;
-            // this.tempY = null;
+            
 
         } 
     } 
@@ -536,6 +527,37 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
               this.gameBoard[this.leftRow][this.leftCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
               this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
               this.tempMesh = null;
+
+              if (keysPressed.Z){
+                this.gameBoard[this.selectedRow][this.selectedCol].position.set(
+                  {
+                    x:this.gameBoard[this.leftRow][this.leftCol].originalPosition.storage[0], 
+                    y:this.gameBoard[this.leftRow][this.leftCol].originalPosition.storage[1], 
+                    z:0
+                  }
+                );
+                this.gameBoard[this.leftRow][this.leftCol].position.set(
+                  {
+                    x:this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.storage[0], 
+                    y:this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.storage[1],
+                    z:0
+                  }
+                );
+                this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.set(
+                  {
+                    x:this.gameBoard[this.selectedRow][this.selectedCol].position.x,
+                    y:this.gameBoard[this.selectedRow][this.selectedCol].position.y,
+                    z:0
+                  }
+                );
+                this.gameBoard[this.leftRow][this.leftCol].originalPosition.set(
+                  {
+                    x:this.gameBoard[this.leftRow][this.leftCol].position.x,
+                    y:this.gameBoard[this.leftRow][this.leftCol].position.y,
+                    z:0
+                  }
+                );
+              }
   
               // reset the selected gem
               this.resetSelected();
@@ -543,6 +565,7 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
 
             } else{
               console.log("invalid move");
+              this.resetSelected();
             }
       } 
     }
@@ -558,12 +581,44 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
               this.gameBoard[this.rightRow][this.rightCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
               this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
               this.tempMesh = null;
+
+              if (keysPressed.Z){
+                this.gameBoard[this.selectedRow][this.selectedCol].position.set(
+                  {
+                    x:this.gameBoard[this.rightRow][this.rightCol].originalPosition.storage[0], 
+                    y:this.gameBoard[this.rightRow][this.rightCol].originalPosition.storage[1], 
+                    z:0
+                  }
+                );
+                this.gameBoard[this.rightRow][this.rightCol].position.set(
+                  {
+                    x:this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.storage[0], 
+                    y:this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.storage[1],
+                    z:0
+                  }
+                );
+                this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.set(
+                  {
+                    x:this.gameBoard[this.selectedRow][this.selectedCol].position.x,
+                    y:this.gameBoard[this.selectedRow][this.selectedCol].position.y,
+                    z:0
+                  }
+                );
+                this.gameBoard[this.rightRow][this.rightCol].originalPosition.set(
+                  {
+                    x:this.gameBoard[this.rightRow][this.rightCol].position.x,
+                    y:this.gameBoard[this.rightRow][this.rightCol].position.y,
+                    z:0
+                  }
+                );
+              }
   
               // reset the selected gem
               this.resetSelected();
               this.clearGems(indices);
             } else{
               console.log("invalid move");
+              this.resetSelected();
             }
       } 
     }
@@ -579,12 +634,44 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
               this.gameBoard[this.bottomRow][this.bottomCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
               this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
               this.tempMesh = null;
+
+              if (keysPressed.Z){
+                this.gameBoard[this.selectedRow][this.selectedCol].position.set(
+                  {
+                    x:this.gameBoard[this.bottomRow][this.bottomCol].originalPosition.storage[0], 
+                    y:this.gameBoard[this.bottomRow][this.bottomCol].originalPosition.storage[1], 
+                    z:0
+                  }
+                );
+                this.gameBoard[this.bottomRow][this.bottomCol].position.set(
+                  {
+                    x:this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.storage[0], 
+                    y:this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.storage[1],
+                    z:0
+                  }
+                );
+                this.gameBoard[this.selectedRow][this.selectedCol].originalPosition.set(
+                  {
+                    x:this.gameBoard[this.selectedRow][this.selectedCol].position.x,
+                    y:this.gameBoard[this.selectedRow][this.selectedCol].position.y,
+                    z:0
+                  }
+                );
+                this.gameBoard[this.bottomRow][this.bottomCol].originalPosition.set(
+                  {
+                    x:this.gameBoard[this.bottomRow][this.bottomCol].position.x,
+                    y:this.gameBoard[this.bottomRow][this.bottomCol].position.y,
+                    z:0
+                  }
+                );
+              }
   
               // reset the selected gem
               this.resetSelected();
               this.clearGems(indices)
             } else{
               console.log("invalid move");
+              this.resetSelected();
             }
      } 
     }
@@ -596,29 +683,6 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
     }
   }
 
-
-
-  //   if (mousePressed.Xdown*this.camera.windowSize.storage[0] > this.gameBoard[row][col].area.storage[0] &&
-  //       mousePressed.Xdown*this.camera.windowSize.storage[0] < this.gameBoard[row][col].area.storage[1] &&
-  //       mousePressed.Ydown*this.camera.windowSize.storage[1] < this.gameBoard[row][col].area.storage[2] &&
-  //       mousePressed.Ydown*this.camera.windowSize.storage[1] > this.gameBoard[row][col].area.storage[3]){
-  //       console.log("something happened")
-  //     }
-  //     if(this.mousePressed.Xup*this.camera.windowSize.storage[0]
-  //     this.mousePressed.Yup*this.camera.windowSize.storage[1]
-
-  //     mousePressed.Xdown*this.camera.windowSize.storage[0] > this.gameBoard[row][col].area.storage[0]
-  // }
-
-  // instead of doing this, when we find the index of the selected gem, get neighbors
-
-  // If mouse clicked and p is pressed, draw a plant where the mouse is clicked:
-  // if(mousePressed.Down && keysPressed.P){
-  //   this.plant2 = new GameObject(this.cyanPlant);
-  //   this.plant2.position.set({x:mousePressed.X*this.camera.windowSize.storage[0], y:mousePressed.Y*this.camera.windowSize.storage[1], z:0});
-  //   this.gameObjects.push(this.plant2);
-  // }
-
   // activate skyfall after quake
   if(!keysPressed.Q){
     this.skyfall();
@@ -626,11 +690,9 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
 
   if(keysPressed.A){
     this.camera.rotation += 0.01;
-    console.log('rotate a');
   }
   if(keysPressed.D){
     this.camera.rotation -= 0.01;
-    console.log('rotate d');
 
   }
 

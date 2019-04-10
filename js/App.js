@@ -50,6 +50,10 @@ App.prototype.registerEventHandlers = function() {
     if(keyboardMap[event.keyCode] === "D"){
       this.keysPressed.D = 1;
     }
+    // Z to control mouse drag
+    if(keyboardMap[event.keyCode] === "Z"){
+      this.keysPressed.Z = 1;
+    }
   };
 
   document.onkeyup = (event) => {
@@ -66,6 +70,10 @@ App.prototype.registerEventHandlers = function() {
     // D to rotate camera clockwise
     if(keyboardMap[event.keyCode] === "D"){
       this.keysPressed.D = 0;
+    }
+    // Z to control mouse drag
+    if(keyboardMap[event.keyCode] === "Z"){
+      this.keysPressed.Z = 0;
     }
   };
 
