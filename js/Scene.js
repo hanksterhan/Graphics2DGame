@@ -33,6 +33,7 @@ const Scene = function(gl) {
   
   this.timeAtLastFrame = new Date().getTime();
 
+  
   this.camera = new OrthoCamera();
   this.camera.updateViewProjMatrix();
   
@@ -41,6 +42,8 @@ const Scene = function(gl) {
   this.numRows = 10;
   this.numCols = 10;
   this.setFrame = 1;
+  this.quakeCount = 0;
+  this.quakeFrameLimit = 100;
 
 Scene.prototype.resetSelected = function(){
   this.selected = null;
@@ -59,27 +62,33 @@ Scene.prototype.resetSelected = function(){
 
 Scene.prototype.checkValidSwap = function(direction){
   // 0 up, 1 right, 2 down, 3 left
-  // returns [[xstart, xend, ystart, yend], [xstart2, xend2, ystart2, yend2]] if 2 swaps are possible
-  // returns [[xstart, xend, ystart, yend]] if only the selected swap is possible
-  // returns [[xstart2, xend2, ystart2, yend2]] if only the secondary swap is possible
+  // returns [[xstart, xend, xbar, ystart, yend, ybar], [xstart2, xend2, xbar2, ystart2, yend2, ybar2]] if 2 swaps are possible
+  // returns [[xstart, xend, xbar, ystart, yend, ybar]] if only the selected swap is possible
+  // returns [[xstart2, xend2, xbar2, ystart2, yend2, ybar2]] if only the secondary swap is possible
   // returns [] if no swaps are possible
 
   var xstart = 0;
   var xend = 0;
+  var xbar = 0;
   var ystart = 0;
   var yend = 0;
+  var ybar = 0;
 
   var xstart2 = this.selectedCol;
   var xend2 = this.selectedCol;
+  var xbar2 = this.selectedRow;
   var ystart2 = this.selectedRow;
   var yend2 = this.selectedRow;
+  var ybar2 = this.selectedCol;
 
   if (direction == 0){
     // check swapping up
     xstart = this.topCol;
     xend = this.topCol;
+    xbar = this.topRow;
     ystart = this.topRow;
     yend = this.topRow;
+    ybar = this.topCol;
 
     // horizontal check
     var i = 1;
@@ -126,8 +135,10 @@ Scene.prototype.checkValidSwap = function(direction){
     //check swapping right
     xstart = this.rightCol;
     xend = this.rightCol;
+    xbar = this.rightRow;
     ystart = this.rightRow;
     yend = this.rightRow;
+    ybar = this.rightCol;
 
     // vertical check
     var i = 1;
@@ -171,8 +182,10 @@ Scene.prototype.checkValidSwap = function(direction){
     // check swapping bottom
     xstart = this.bottomCol;
     xend = this.bottomCol;
+    xbar = this.bottomRow;
     ystart = this.bottomRow;
     yend = this.bottomRow;
+    ybar = this.bottomCol;
 
     // horizontal check
     var i = 1;
@@ -217,8 +230,10 @@ Scene.prototype.checkValidSwap = function(direction){
     //check swapping left
     xstart = this.leftCol;
     xend = this.leftCol;
+    xbar = this.leftRow;
     ystart = this.leftRow;
     yend = this.leftRow;
+    ybar = this.leftCol;
 
     // vertical check
     var i = 1;
@@ -262,15 +277,72 @@ Scene.prototype.checkValidSwap = function(direction){
   var returnList = [];
   // check if valid move
   if (xend - xstart >= 2 || yend - ystart >= 2){
-    returnList.push([xstart, xend, ystart, yend]);
+    returnList.push([xstart, xend, xbar, ystart, yend, ybar]);
     console.log("orig swap");
   } 
   if(xend2 - xstart2 >= 2 || yend2 - ystart2 >= 2){
-    returnList.push([xstart2, xend2, ystart2, yend2]);
+    returnList.push([xstart2, xend2, xbar2, ystart2, yend2, ybar2]);
     console.log("secondary swap");
   }
 
   return returnList;
+}
+
+Scene.prototype.clearGems = function(indices){
+  // [[xstart, xend, xbar, ystart, yend, ybar], [xstart2, xend2, xbar2, ystart2, yend2, ybar2]] if 2 swaps are possible
+  // [[xstart, xend, xbar, ystart, yend, ybar]] if only the selected swap is possible
+  // [[xstart2, xend2, xbar2, ystart2, yend2, ybar2]] if only the secondary swap is possible
+  for(var i=0; i<indices.length;i++){
+    var xstart = indices[i][0];
+    var xend = indices[i][1];
+    var xbar = indices[i][2]
+    var ystart = indices[i][3];
+    var yend = indices[i][4];
+    var ybar = indices[i][5];
+    for(var j=xstart; j<=xend; j++){
+      this.bomb(j, xbar);
+    }
+    for(var k=ystart; k<=yend; k++){
+      this.bomb(k, ybar);
+    }
+  }
+}
+
+Scene.prototype.bomb = function(row, col) {
+  this.gameBoard[row][col].scale.set(0,0,0);
+}
+
+Scene.prototype.dramaticExit = function(row, col){
+  console.log("deleting at ", row, col)
+  const deleteTimeStart = new Date().getTime();
+  var dt = 0
+  while(dt > -0.4){
+    var timeAtThisFrame = new Date().getTime();
+    dt = (deleteTimeStart - timeAtThisFrame) / 1000.0;
+    if (dt.toString().split('').pop() > 8){
+      this.gameBoard[row][col].scale.x *= 0.99;
+      this.gameBoard[row][col].scale.y *= 0.99;
+      this.gameBoard[row][col].orientation += 0.1;
+      console.log("spin");
+    }
+    this.gameBoard[row][col].draw(this.camera);
+    // console.log(dt);
+  }  
+}
+
+Scene.prototype.skyfall = function() {
+  for(var row=this.numRows-1; row>=0; row--){
+    for(var col=0; col<this.numCols; col++){
+      //skyfall needed if gem was deleted
+      if (this.gameBoard[row][col].scale.storage[0] == 0){
+        this.gameBoard[row][col].scale.set(0.15,0.15,1);
+        for(var overhead=row-1; overhead>1; overhead--){
+          this.gameBoard[overhead+1][col].mesh = this.gameBoard[overhead][col].mesh;
+        }
+        this.gameBoard[0][col].mesh = this.asteroidMeshes[Math.floor(Math.random() * this.asteroidMeshes.length)];
+      }
+    }
+  }
 }
 
 Scene.prototype.update = function(gl, keysPressed, mousePressed) {
@@ -341,6 +413,37 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
     }
   }
 
+  //if mouse clicked and the key B is pressed, delete the object 
+  if(mousePressed.Down && keysPressed.B){
+    this.bomb(this.selectedRow, this.selectedCol);
+    this.resetSelected();
+  }
+
+  // if the key Q is pressed, quake
+  if(keysPressed.Q){
+    if (this.quakeCount < 100){
+      console.log("Quake time");
+      this.quakeCount += 1;
+      console.log(this.camera.position.x, this.camera.position.y);
+      this.camera.position.x = 0 + Math.sin(Math.random());
+      this.camera.position.y = 0 + Math.sin(Math.random());
+
+      // 0.1% chance of gem disappearing
+      for(var row=0; row<this.numRows; row++){
+        for(var col=0; col<this.numCols; col++){
+          if(Math.floor(Math.random()*1000) == 842){
+            this.bomb(row, col);
+          }
+        }
+      }
+      
+    } else{
+      console.log("Quake limit reached");
+    }
+  } else{ //reset camera position to the center
+    this.camera.position.set(0,0);
+  }
+
   // mouse drag selected objects if mouse is down and moving
   if(mousePressed.Down && mousePressed.Move && this.selected != null){
     var ratio = this.camera.windowSize.storage[0] / this.camera.windowSize.storage[1];
@@ -385,16 +488,18 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
           mousePressed.Xup*this.camera.windowSize.storage[0] < this.gameBoard[this.topRow][this.topCol].area.storage[1] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] < this.gameBoard[this.topRow][this.topCol].area.storage[2] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] > this.gameBoard[this.topRow][this.topCol].area.storage[3]){
-            console.log(this.checkValidSwap(0));
-            if(this.checkValidSwap(0).length){
+            var indices = this.checkValidSwap(0);
+            if(indices.length){
               this.tempMesh = this.gameBoard[this.topRow][this.topCol].mesh;
               this.gameBoard[this.topRow][this.topCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
               this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
               this.tempMesh = null;
-  
+              
               console.log('valid swap');
               // reset the selected gem
               this.resetSelected();
+              this.clearGems(indices);
+
             } else{
               console.log('invalid swap');
               this.resetSelected();
@@ -425,8 +530,8 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
           mousePressed.Xup*this.camera.windowSize.storage[0] < this.gameBoard[this.leftRow][this.leftCol].area.storage[1] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] < this.gameBoard[this.leftRow][this.leftCol].area.storage[2] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] > this.gameBoard[this.leftRow][this.leftCol].area.storage[3]){
-            console.log(this.checkValidSwap(3));
-            if (this.checkValidSwap(3).length){
+            var indices = this.checkValidSwap(3);
+            if (indices.length){
               this.tempMesh = this.gameBoard[this.leftRow][this.leftCol].mesh;
               this.gameBoard[this.leftRow][this.leftCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
               this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
@@ -434,6 +539,7 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
   
               // reset the selected gem
               this.resetSelected();
+              this.clearGems(indices);
 
             } else{
               console.log("invalid move");
@@ -446,7 +552,8 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
           mousePressed.Xup*this.camera.windowSize.storage[0] < this.gameBoard[this.rightRow][this.rightCol].area.storage[1] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] < this.gameBoard[this.rightRow][this.rightCol].area.storage[2] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] > this.gameBoard[this.rightRow][this.rightCol].area.storage[3]){
-            if (this.checkValidSwap(1).length){
+            var indices = this.checkValidSwap(1);
+            if (indices.length){
               this.tempMesh = this.gameBoard[this.rightRow][this.rightCol].mesh;
               this.gameBoard[this.rightRow][this.rightCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
               this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
@@ -454,6 +561,7 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
   
               // reset the selected gem
               this.resetSelected();
+              this.clearGems(indices);
             } else{
               console.log("invalid move");
             }
@@ -465,7 +573,8 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
           mousePressed.Xup*this.camera.windowSize.storage[0] < this.gameBoard[this.bottomRow][this.bottomCol].area.storage[1] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] < this.gameBoard[this.bottomRow][this.bottomCol].area.storage[2] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] > this.gameBoard[this.bottomRow][this.bottomCol].area.storage[3]){
-            if (this.checkValidSwap(2).length){
+            var indices = this.checkValidSwap(2);
+            if (indices.length){
               this.tempMesh = this.gameBoard[this.bottomRow][this.bottomCol].mesh;
               this.gameBoard[this.bottomRow][this.bottomCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
               this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
@@ -473,6 +582,7 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
   
               // reset the selected gem
               this.resetSelected();
+              this.clearGems(indices)
             } else{
               console.log("invalid move");
             }
@@ -509,10 +619,27 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
   //   this.gameObjects.push(this.plant2);
   // }
 
+  // activate skyfall after quake
+  if(!keysPressed.Q){
+    this.skyfall();
+  }
+
+  if(keysPressed.A){
+    this.camera.rotation += 0.01;
+    console.log('rotate a');
+  }
+  if(keysPressed.D){
+    this.camera.rotation -= 0.01;
+    console.log('rotate d');
+
+  }
+
   // clear the screen
   gl.clearColor(0.2, 0.3, 0.4, 1);
   gl.clearDepth(1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  this.camera.updateViewProjMatrix();
 
 
   // draw all objects

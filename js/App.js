@@ -42,6 +42,14 @@ App.prototype.registerEventHandlers = function() {
     if(keyboardMap[event.keyCode] === "Q"){
       this.keysPressed.Q = 1;
     }
+    // A to rotate camera counterclockwise
+    if(keyboardMap[event.keyCode] === "A"){
+      this.keysPressed.A = 1;
+    }
+    // D to rotate camera clockwise
+    if(keyboardMap[event.keyCode] === "D"){
+      this.keysPressed.D = 1;
+    }
   };
 
   document.onkeyup = (event) => {
@@ -49,7 +57,15 @@ App.prototype.registerEventHandlers = function() {
       this.keysPressed.B = 0;
     }
     if(keyboardMap[event.keyCode] === "Q"){
-      this.keysPressed.A = Q;
+      this.keysPressed.Q = 0;
+    }
+    // A to rotate camera counterclockwise
+    if(keyboardMap[event.keyCode] === "A"){
+      this.keysPressed.A = 0;
+    }
+    // D to rotate camera clockwise
+    if(keyboardMap[event.keyCode] === "D"){
+      this.keysPressed.D = 0;
     }
   };
 
