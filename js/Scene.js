@@ -57,13 +57,22 @@ Scene.prototype.resetSelected = function(){
   this.bottomRow = null;
 }
 
-Scene.prototype.checkValid = function(direction){
+Scene.prototype.checkValidSwap = function(direction){
   // 0 up, 1 right, 2 down, 3 left
-  // returns [xstart, xend, ystart, yend] if valid, 0 if invalid
+  // returns [[xstart, xend, ystart, yend], [xstart2, xend2, ystart2, yend2]] if 2 swaps are possible
+  // returns [[xstart, xend, ystart, yend]] if only the selected swap is possible
+  // returns [[xstart2, xend2, ystart2, yend2]] if only the secondary swap is possible
+  // returns [] if no swaps are possible
+
   var xstart = 0;
   var xend = 0;
   var ystart = 0;
   var yend = 0;
+
+  var xstart2 = this.selectedCol;
+  var xend2 = this.selectedCol;
+  var ystart2 = this.selectedRow;
+  var yend2 = this.selectedRow;
 
   if (direction == 0){
     // check swapping up
@@ -90,6 +99,29 @@ Scene.prototype.checkValid = function(direction){
       ystart -= 1;
       i += 1;
     }
+
+    // Secondary check
+    var secondaryID = this.gameBoard[this.topRow][this.topCol].meshID;
+
+    // horizontal check
+    var i = 1;
+    while((this.selectedCol-i >= 0) && this.gameBoard[this.selectedRow][this.selectedCol-i].meshID == secondaryID){
+      xstart2 -= 1;
+      i += 1;
+    }
+    var i = 1;
+    while((this.selectedCol+i < this.numCols) && this.gameBoard[this.selectedRow][this.selectedCol+i].meshID == secondaryID){
+      xend2 += 1;
+      i += 1;
+    }
+
+    // vertical check
+    var i = 1;
+    while((this.selectedRow-i >= 0) && this.gameBoard[this.selectedRow-i][this.selectedCol].meshID == secondaryID){
+      ystart2 -= 1;
+      i += 1;
+    }
+
   } else if(direction == 1){
     //check swapping right
     xstart = this.rightCol;
@@ -114,6 +146,27 @@ Scene.prototype.checkValid = function(direction){
       xend += 1;
       i += 1;
     }
+
+    var secondaryID = this.gameBoard[this.rightRow][this.rightCol].meshID;
+
+    // vertical check
+    var i = 1;
+    while((this.selectedRow-i >= 0) && this.gameBoard[this.selectedRow-i][this.selectedCol].meshID == secondaryID){
+      ystart2 -= 1;
+      i += 1;
+    }
+    var i = 1;
+    while((this.selectedRow+i < this.numRows) && this.gameBoard[this.selectedRow+i][this.selectedCol].meshID == secondaryID){
+      yend2 += 1;
+      i += 1;
+    }
+    // horizontal check
+    var i = 1;
+    while((this.selectedCol+i < this.numCols) && this.gameBoard[this.selectedRow][this.selectedCol+i].meshID == secondaryID){
+      xend2 += 1;
+      i += 1;
+    }
+
   } else if(direction == 2){
     // check swapping bottom
     xstart = this.bottomCol;
@@ -139,6 +192,27 @@ Scene.prototype.checkValid = function(direction){
       yend += 1;
       i += 1;
     }
+
+    var secondaryID = this.gameBoard[this.bottomRow][this.bottomCol].meshID;
+
+    // horizontal check
+    var i = 1;
+    while((this.selectedCol-i >= 0) && this.gameBoard[this.selectedRow][this.selectedCol-i].meshID == secondaryID){
+      xstart2 -= 1;
+      i += 1;
+    }
+    var i = 1;
+    while((this.selectedCol+i < this.numCols) && this.gameBoard[this.selectedRow][this.selectedCol+i].meshID == secondaryID){
+      xend2 += 1;
+      i += 1;
+    }
+
+    // vertical check
+    var i = 1;
+    while((this.selectedRow+i < this.numRows) && this.gameBoard[this.selectedRow+i][this.selectedCol].meshID == secondaryID){
+      yend2 += 1;
+      i += 1;
+        }
   } else {
     //check swapping left
     xstart = this.leftCol;
@@ -163,16 +237,40 @@ Scene.prototype.checkValid = function(direction){
       xstart -= 1;
       i += 1;
     }
+
+    var secondaryID = this.gameBoard[this.bottomRow][this.bottomCol].meshID;
+
+    // vertical check
+    var i = 1;
+    while((this.selectedRow-i >= 0) && this.gameBoard[this.selectedRow-i][this.selectedCol].meshID == secondaryID){
+      ystart2 -= 1;
+      i += 1;
+    }
+    var i = 1;
+    while((this.selectedRow+i < this.numRows) && this.gameBoard[this.selectedRow+i][this.selectedCol].meshID == secondaryID){
+      yend2 += 1;
+      i += 1;
+    }
+    // horizontal check
+    var i = 1;
+    while((this.selectedCol-i >= 0) && this.gameBoard[this.selectedRow][this.selectedCol+i].meshID == secondaryID){
+      xstart2 -= 1;
+      i += 1;
+    }
   }
     
+  var returnList = [];
   // check if valid move
   if (xend - xstart >= 2 || yend - ystart >= 2){
-    return [xstart, xend, ystart, yend];
-  } else{
-    return 0;
+    returnList.push([xstart, xend, ystart, yend]);
+    console.log("orig swap");
+  } 
+  if(xend2 - xstart2 >= 2 || yend2 - ystart2 >= 2){
+    returnList.push([xstart2, xend2, ystart2, yend2]);
+    console.log("secondary swap");
   }
 
-
+  return returnList;
 }
 
 Scene.prototype.update = function(gl, keysPressed, mousePressed) {
@@ -287,8 +385,8 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
           mousePressed.Xup*this.camera.windowSize.storage[0] < this.gameBoard[this.topRow][this.topCol].area.storage[1] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] < this.gameBoard[this.topRow][this.topCol].area.storage[2] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] > this.gameBoard[this.topRow][this.topCol].area.storage[3]){
-
-            if(this.checkValid(0)){
+            console.log(this.checkValidSwap(0));
+            if(this.checkValidSwap(0).length){
               this.tempMesh = this.gameBoard[this.topRow][this.topCol].mesh;
               this.gameBoard[this.topRow][this.topCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
               this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
@@ -327,13 +425,19 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
           mousePressed.Xup*this.camera.windowSize.storage[0] < this.gameBoard[this.leftRow][this.leftCol].area.storage[1] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] < this.gameBoard[this.leftRow][this.leftCol].area.storage[2] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] > this.gameBoard[this.leftRow][this.leftCol].area.storage[3]){
-            this.tempMesh = this.gameBoard[this.leftRow][this.leftCol].mesh;
-            this.gameBoard[this.leftRow][this.leftCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
-            this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
-            this.tempMesh = null;
+            console.log(this.checkValidSwap(3));
+            if (this.checkValidSwap(3).length){
+              this.tempMesh = this.gameBoard[this.leftRow][this.leftCol].mesh;
+              this.gameBoard[this.leftRow][this.leftCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
+              this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
+              this.tempMesh = null;
+  
+              // reset the selected gem
+              this.resetSelected();
 
-            // reset the selected gem
-            this.resetSelected();
+            } else{
+              console.log("invalid move");
+            }
       } 
     }
 
@@ -342,13 +446,17 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
           mousePressed.Xup*this.camera.windowSize.storage[0] < this.gameBoard[this.rightRow][this.rightCol].area.storage[1] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] < this.gameBoard[this.rightRow][this.rightCol].area.storage[2] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] > this.gameBoard[this.rightRow][this.rightCol].area.storage[3]){
-            this.tempMesh = this.gameBoard[this.rightRow][this.rightCol].mesh;
-            this.gameBoard[this.rightRow][this.rightCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
-            this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
-            this.tempMesh = null;
-
-            // reset the selected gem
-            this.resetSelected();
+            if (this.checkValidSwap(1).length){
+              this.tempMesh = this.gameBoard[this.rightRow][this.rightCol].mesh;
+              this.gameBoard[this.rightRow][this.rightCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
+              this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
+              this.tempMesh = null;
+  
+              // reset the selected gem
+              this.resetSelected();
+            } else{
+              console.log("invalid move");
+            }
       } 
     }
 
@@ -357,13 +465,17 @@ Scene.prototype.update = function(gl, keysPressed, mousePressed) {
           mousePressed.Xup*this.camera.windowSize.storage[0] < this.gameBoard[this.bottomRow][this.bottomCol].area.storage[1] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] < this.gameBoard[this.bottomRow][this.bottomCol].area.storage[2] &&
           mousePressed.Yup*this.camera.windowSize.storage[1] > this.gameBoard[this.bottomRow][this.bottomCol].area.storage[3]){
-            this.tempMesh = this.gameBoard[this.bottomRow][this.bottomCol].mesh;
-            this.gameBoard[this.bottomRow][this.bottomCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
-            this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
-            this.tempMesh = null;
-
-            // reset the selected gem
-            this.resetSelected();
+            if (this.checkValidSwap(2).length){
+              this.tempMesh = this.gameBoard[this.bottomRow][this.bottomCol].mesh;
+              this.gameBoard[this.bottomRow][this.bottomCol].mesh = this.gameBoard[this.selectedRow][this.selectedCol].mesh;
+              this.gameBoard[this.selectedRow][this.selectedCol].mesh = this.tempMesh;
+              this.tempMesh = null;
+  
+              // reset the selected gem
+              this.resetSelected();
+            } else{
+              console.log("invalid move");
+            }
      } 
     }
 
